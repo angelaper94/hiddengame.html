@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hidden Game · Soluzione</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="color-scheme" content="dark light" />
+  <style>
+    :root{color-scheme: light dark;}
+    .shake{animation:shake .36s linear}
+    @keyframes shake{
+      10%,90%{transform:translateX(-1px)}
+      20%,80%{transform:translateX(2px)}
+      30%,50%,70%{transform:translateX(-4px)}
+      40%,60%{transform:translateX(4px)}
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-50">
+  <div class="max-w-2xl mx-auto p-6">
+    <header class="mb-8 text-center">
+      <h1 class="text-2xl font-bold tracking-tight">Hidden Game · Soluzione</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400">Sei pronto a risolvere il caso?</p>
+    </header>
+
+    <script>
+      // Configurazione step (domande/risposte/descrizioni)
+      const STEPS = [
+        {
+          id: "step-1",
+          titolo: "Chi ha ucciso il Dottor Valenti?",
+          consegna: "Ripensa agli indizi e scrivi il nome dell'assassino.",
+          accettate: ["federica", "federica antonelli", "antonelli"],
+          descrizione: "Hai collegato accesso, opportunità e movente: Federica prepara il caffè delle 19 e altera la dose, coprendosi con il registro."
+        },
+        {
+          id: "step-2",
+          titolo: "Qual è la causa del decesso?",
+          consegna: "Ripensa agli indizi.",
+          accettate: ["overdose", "overdose di farmaci"],
+          descrizione: "Morte per overdose: combinazione di sedativi e quadro clinico già fragile ha portato all’arresto cardio-respiratorio."
+        },
+        {
+          id: "step-3",
+          titolo: "Qual è la sostanza responsabile della morte del Dottor Valenti?",
+          consegna: "Con quale sostanza è stato ucciso il dottore?",
+          accettate: ["benzodiazepina", "benzodiazepine", "ansiolitico"],
+          descrizione: "Le benzodiazepine nel caffè (residui nella tazzina) hanno potenziato gli effetti e precipitato l’evento fatale."
+        }
+      ];
+    </script>
+
+    <main id="app" class="space-y-6"></main>
+
+    <footer class="mt-12 text-center text-xs text-slate-400">
+      <p>Versione base · progressi salvati in locale.</p>
+    </footer>
+
+    <!-- Epilogo: si sblocca solo a puzzle completato -->
+    <section id="epilogo" class="hidden mt-10 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 p-6">
+      <h2 class="text-xl font-semibold">Epilogo – Risoluzione del caso</h2>
+      <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">
+        Ascolta l'audio con la spiegazione finale. Assicurati che il file <code>epilogo.mp3</code> sia
+        nella stessa cartella di questa pagina.
+      </p>
+      <div class="mt-4">
+        <audio id="epAudio" controls preload="none" class="w-full rounded-xl border border-slate-300 dark:border-slate-700">
+          <source src="epilogo.mp3" type="audio/mpeg">
+          Il tuo browser non supporta l'audio HTML5.
+        </audio>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function(){
+      // Normalizza stringhe per confronto
+      const normalize = s => String(s)
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .replace(/[^a-z0-9]+/g,'')
+        .trim();
+
+      const accepted = (val, list) => {
+        const n = normalize(val);
+        return (list || []).some(ans => normalize(ans) === n);
+      };
+
+      // Persistenza
+      const KEY = 'hg_valenti_progress';
+      const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch { return {}; } };
+      const save = (p) => { try { localStorage.setItem(KEY, JSON.stringify(p)); } catch {} };
+
+      const app = document.getElementById('app');
+      const progress = load();
+
+      function render(){
+        app.innerHTML = '';
+        STEPS.forEach((step, i) => {
+          const unlocked = (i === 0) || (progress[STEPS[i-1].id] === true);
+          const solved = progress[step.id] === true;
+
+          // Nascondi gli step non ancora sbloccati
+          if (!unlocked) return;
+
+          const card = document.createElement('section');
+          card.className = `rounded-2xl border p-5 shadow-sm ${
+            solved ? 'border-emerald-300/60 bg-emerald-50 dark:bg-emerald-950/20'
+                   : 'border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60'
+          }`;
+
+          const h = document.createElement('h2');
+          h.className = 'text-lg font-semibold flex items-center gap-2';
+          h.innerHTML = `${i+1}. ${step.titolo} ${solved ? '<span class="text-emerald-600 text-sm">✓</span>' : ''}`;
+
+          const p = document.createElement('p');
+          p.className = 'mt-1 text-sm text-slate-600 dark:text-slate-400';
+          p.textContent = step.consegna;
+
+          const wrap = document.createElement('div');
+          wrap.className = 'mt-4 flex gap-2';
+
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.placeholder = 'Scrivi qui la risposta…';
+          input.className = 'flex-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500';
+          input.disabled = solved;
+
+          const btn = document.createElement('button');
+          btn.className = 'rounded-xl bg-indigo-600 text-white px-4 py-2 text-sm font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60';
+          btn.textContent = solved ? 'Risolto' : 'Verifica';
+          btn.disabled = solved;
+
+          const msg = document.createElement('div');
+          msg.className = 'mt-3 text-sm hidden';
+
+          if (solved) {
+            const solvedMsg = document.createElement('div');
+            solvedMsg.className = 'mt-3 text-sm text-emerald-700 dark:text-emerald-400';
+            solvedMsg.textContent = 'Corretto. Step sbloccato.';
+
+            const desc = document.createElement('div');
+            desc.className = 'mt-2 text-sm text-emerald-800/90 dark:text-emerald-200/90';
+            if (step.descrizione) desc.textContent = step.descrizione;
+
+            card.append(h, p, solvedMsg, desc);
+            app.append(card);
+            return;
+          }
+
+          function check(){
+            const v = input.value.trim();
+            if (!v) return;
+            if (accepted(v, step.accettate)) {
+              progress[step.id] = true; save(progress);
+              msg.className = 'mt-3 text-sm text-emerald-700 dark:text-emerald-400';
+              msg.textContent = 'Corretto! Step sbloccato.';
+              btn.disabled = true; input.disabled = true;
+              setTimeout(render, 400);
+            } else {
+              msg.className = 'mt-3 text-sm text-rose-700 dark:text-rose-400';
+              msg.textContent = 'Risposta errata. Riprova.';
+              input.classList.remove('shake'); void input.offsetWidth; input.classList.add('shake');
+            }
+          }
+
+          btn.addEventListener('click', check);
+          input.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+
+          wrap.append(input, btn);
+          card.append(h, p, wrap, msg);
+          app.append(card);
+
+          if (unlocked && !solved && !document.querySelector('[data-focus]')) {
+            input.setAttribute('data-focus','1');
+            setTimeout(() => input.focus(), 0);
+          }
+        });
+
+        // Fine gioco → sblocca epilogo
+        const allSolved = STEPS.every(s => progress[s.id] === true);
+        const epBox = document.getElementById('epilogo');
+        if (allSolved) {
+          const done = document.createElement('section');
+          done.className = 'mt-8 rounded-2xl border border-emerald-300/60 bg-emerald-50 p-6 text-center dark:border-emerald-900/40 dark:bg-emerald-950/20';
+          done.innerHTML = `
+            <h3 class="text-xl font-semibold text-emerald-700 dark:text-emerald-300">Complimenti, caso risolto!</h3>
+            <p class="mt-2 text-sm text-emerald-800/80 dark:text-emerald-300/80">Hai inserito tutte le risposte corrette. Puoi ascoltare l'epilogo.</p>
+            <div class="mt-4 flex justify-center gap-3">
+              <a href="#epilogo" class="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700">Vai all'epilogo</a>
+              <button id="reset" class="rounded-xl border border-emerald-600/30 px-3 py-2 text-xs text-emerald-700 hover:bg-emerald-100 dark:text-emerald-300 dark:hover:bg-emerald-900/20">Azzera progressi</button>
+            </div>`;
+          app.append(done);
+          if (epBox) epBox.classList.remove('hidden');
+
+          done.querySelector('#reset').addEventListener('click', () => {
+            localStorage.removeItem(KEY); location.reload();
+          });
+        }
+      }
+
+      // Avvio
+      if (document.readyState !== 'loading') render();
+      else document.addEventListener('DOMContentLoaded', render);
+    })();
+  </script>
+</body>
+</html>
